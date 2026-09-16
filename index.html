@@ -546,6 +546,48 @@
       <!-- MS Word Floating Context Toolbar -->
       <div id="word-floating-toolbar" class="word-floating-toolbar hidden">
         <button
+          class="word-btn primary-action"
+          id="word-btn-explanation"
+          title="Add Explanation"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M12 3v18" />
+            <path d="M3 12h18" />
+            <path d="m5 5 14 14" />
+            <path d="M19 5 5 19" />
+          </svg>
+          Add Explanation
+        </button>
+
+        <button class="word-btn primary-action" id="word-btn-ai" title="Ask AI">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path
+              d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"
+            />
+            <path
+              d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"
+            />
+          </svg>
+          Ask AI
+        </button>
+
+        <div class="word-divider"></div>
+
+        <button
           class="word-btn"
           id="word-btn-copy"
           title="Copy Selected Text (Ctrl+C)"
@@ -622,6 +664,46 @@
           </svg>
           Delete
         </button>
+      </div>
+
+      <div
+        id="explanation-dialog"
+        class="explanation-dialog hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="explanation-dialog-title"
+      >
+        <div class="explanation-dialog-header">
+          <div>
+            <span class="eyebrow">Selected passage</span>
+            <h2 id="explanation-dialog-title">Add Explanation</h2>
+          </div>
+          <button
+            class="btn-icon-only"
+            id="explanation-cancel"
+            title="Close explanation dialog"
+            aria-label="Close explanation dialog"
+          >
+            &times;
+          </button>
+        </div>
+        <blockquote id="explanation-selected-text"></blockquote>
+        <label class="explanation-label" for="explanation-input"
+          >Your explanation</label
+        >
+        <textarea
+          id="explanation-input"
+          rows="4"
+          placeholder="Write a note about this passage..."
+        ></textarea>
+        <div class="explanation-dialog-actions">
+          <button class="btn btn-secondary" id="explanation-cancel-secondary">
+            Cancel
+          </button>
+          <button class="btn btn-primary" id="explanation-save">
+            Save Explanation
+          </button>
+        </div>
       </div>
 
       <!-- MS Word Custom Right-Click Context Menu -->
