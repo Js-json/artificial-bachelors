@@ -22,6 +22,18 @@ pnpm-debug.log*
 
 # IDE / OS Files
 .DS_Store
+<<<<<<< HEAD
 Thumbs.db
 .vscode/
 .idea/
+=======
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+.env
+.env.local
+.env.*.local
+>>>>>>> a58319a59632aea85bed73dd1b58b2b9949faaca
