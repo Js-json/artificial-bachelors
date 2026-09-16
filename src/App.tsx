@@ -3,9 +3,11 @@ import { supabase } from './services/supabase';
 import { PdfViewer } from './components/PdfViewer';
 import type { IHighlight, NewHighlight } from 'react-pdf-highlighter';
 import { Upload } from 'lucide-react';
+import { computeSHA256 } from './lib/crypto';
 
 function App() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [documentHash, setDocumentHash] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<IHighlight[]>([]);
 
   // Function to load highlights for a given PDF url
@@ -20,11 +22,11 @@ function App() {
       
       if (data) {
         // Map data back to IHighlight format
-        const mapped = data.map((d: any) => ({
+        const mapped: IHighlight[] = data.map((d: any) => ({
           id: d.id.toString(),
           position: d.position,
           content: d.content,
-          comment: { text: d.explanation }
+          comment: { text: d.explanation, emoji: '' }
         }));
         setHighlights(mapped);
       }
@@ -39,11 +41,11 @@ function App() {
     }
   }, [pdfUrl]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // In a real app, you'd upload this file to Supabase Storage and get a real URL
-      // For this MVP, we use object URL for local state
+      const hash = await computeSHA256(file);
+      setDocumentHash(hash);
       const url = URL.createObjectURL(file);
       setPdfUrl(url);
     }
@@ -56,6 +58,7 @@ function App() {
       id: newId,
       comment: {
         text: explanation || 'User note',
+        emoji: '',
       },
     };
     
@@ -81,7 +84,14 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white shadow-sm px-6 py-4 flex items-center justify-between z-10">
-        <h1 className="text-xl font-bold text-gray-800">PDF Knowledge Layer</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-gray-800">PDF Knowledge Layer</h1>
+          {documentHash && (
+            <span className="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full font-mono border border-indigo-200">
+              Hash: {documentHash.slice(0, 12)}
+            </span>
+          )}
+        </div>
         <div className="relative">
           <input
             type="file"

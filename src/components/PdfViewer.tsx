@@ -10,8 +10,8 @@ import type { IHighlight, NewHighlight } from 'react-pdf-highlighter';
 import { AnnotationPopup } from './AnnotationPopup';
 
 // Worker configuration
-import { pdfjs } from 'pdfjs-dist';
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
+import * as pdfjsLib from 'pdfjs-dist';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
 
 import 'react-pdf-highlighter/dist/style.css';
 
@@ -30,12 +30,12 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, highlights, onAddHigh
             pdfDocument={pdfDocument}
             enableAreaSelection={(event) => event.altKey}
             onScrollChange={() => {}}
-            scrollRef={(scrollTo) => {}}
+            scrollRef={(_scrollTo) => {}}
             onSelectionFinished={(
               position,
               content,
               hideTipAndSelection,
-              transformSelection
+              _transformSelection
             ) => {
               console.log('--- Selection Captured ---');
               console.log('Selected text:', content.text);
@@ -46,7 +46,14 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, highlights, onAddHigh
                 <AnnotationPopup
                   content={content}
                   onSave={(explanation) => {
-                    onAddHighlight({ position, content }, explanation);
+                    onAddHighlight(
+                      {
+                        position,
+                        content,
+                        comment: { text: explanation || 'User note', emoji: '' }
+                      },
+                      explanation
+                    );
                     hideTipAndSelection();
                   }}
                 />
@@ -57,8 +64,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, highlights, onAddHigh
               index,
               setTip,
               hideTip,
-              viewportToScaled,
-              screenshot,
+              _viewportToScaled,
+              _screenshot,
               isScrolledTo
             ) => {
               const isTextHighlight = !Boolean(highlight.content && highlight.content.image);
@@ -75,8 +82,8 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, highlights, onAddHigh
 
               return (
                 <Popup
-                  popupContent={<div className="p-2 bg-white rounded shadow-lg text-sm max-w-xs">{highlight.comment?.text || highlight.comment?.explanation}</div>}
-                  onMouseOver={(popupContent) => setTip(highlight, (highlight) => popupContent)}
+                  popupContent={<div className="p-2 bg-white rounded shadow-lg text-sm max-w-xs">{highlight.comment?.text}</div>}
+                  onMouseOver={(popupContent) => setTip(highlight, (_hl) => popupContent)}
                   onMouseOut={hideTip}
                   key={index}
                 >
