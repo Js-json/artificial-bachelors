@@ -106,10 +106,16 @@ function App() {
             />
           </div>
         ) : (
-          <div className="h-[calc(100vh-120px)] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white">
+          <div className="h-[calc(100vh-120px)] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white relative hover:bg-gray-50 transition-colors">
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={handleFileUpload}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
             <Upload className="w-12 h-12 text-gray-400 mb-4" />
             <h2 className="text-xl font-semibold text-gray-700">No PDF selected</h2>
-            <p className="text-gray-500 mt-2">Upload a PDF to start annotating and gaining insights.</p>
+            <p className="text-gray-500 mt-2">Click or drag a PDF here to start annotating and gaining insights.</p>
           </div>
         )}
       </main>

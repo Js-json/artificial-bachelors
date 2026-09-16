@@ -42,13 +42,13 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({ content, onSav
               className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              Explain with AI
+              🤖 Explain with AI
             </button>
             <button
               onClick={() => onSave()}
               className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 px-3 py-2 rounded-md text-sm transition-colors"
             >
-              Just Highlight
+              ✍️ Add My Note
             </button>
           </div>
         </>

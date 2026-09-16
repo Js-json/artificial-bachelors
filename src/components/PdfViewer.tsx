@@ -36,15 +36,22 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({ url, highlights, onAddHigh
               content,
               hideTipAndSelection,
               transformSelection
-            ) => (
-              <AnnotationPopup
-                content={content}
-                onSave={(explanation) => {
-                  onAddHighlight({ position, content }, explanation);
-                  hideTipAndSelection();
-                }}
-              />
-            )}
+            ) => {
+              console.log('--- Selection Captured ---');
+              console.log('Selected text:', content.text);
+              console.log('Page number:', position.pageNumber);
+              console.log('Position data:', position);
+
+              return (
+                <AnnotationPopup
+                  content={content}
+                  onSave={(explanation) => {
+                    onAddHighlight({ position, content }, explanation);
+                    hideTipAndSelection();
+                  }}
+                />
+              );
+            }}
             highlightTransform={(
               highlight,
               index,
