@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 
 export async function createSamplePdf() {
   const pdfDoc = await PDFDocument.create();
@@ -8,17 +8,17 @@ export async function createSamplePdf() {
 
   // Page 1: Welcome & Overview
   const page1 = pdfDoc.addPage([600, 800]);
-  
+
   // Header Banner
   page1.drawRectangle({
     x: 0,
     y: 720,
     width: 600,
     height: 80,
-    color: rgb(0.08, 0.45, 0.91),
+    color: rgb(0.18, 0.49, 0.2),
   });
 
-  page1.drawText('PDF EDITOR PRO - SAMPLE DOCUMENT', {
+  page1.drawText("CODr - SAMPLE DOCUMENT", {
     x: 40,
     y: 750,
     size: 20,
@@ -26,16 +26,16 @@ export async function createSamplePdf() {
     color: rgb(1, 1, 1),
   });
 
-  page1.drawText('Welcome to your all-in-one Web PDF Editor!', {
+  page1.drawText("Welcome to your all-in-one Web PDF Editor!", {
     x: 40,
     y: 730,
     size: 11,
     font: fontHelvetica,
-    color: rgb(0.85, 0.92, 1),
+    color: rgb(0.9, 0.98, 0.9),
   });
 
   // Section 1: Features
-  page1.drawText('Key Editing Capabilities:', {
+  page1.drawText("Key Editing Capabilities:", {
     x: 40,
     y: 670,
     size: 15,
@@ -44,18 +44,18 @@ export async function createSamplePdf() {
   });
 
   const features = [
-    '1. Add & Edit Custom Text: Click anywhere on any page to insert custom text.',
-    '2. Freehand Pencil & Pen: Draw, sketch, and scribble directly on PDF pages.',
-    '3. Translucent Highlighter: Highlight important sentences with custom colors.',
-    '4. Shape Overlay: Draw Rectangles, Circles, Arrows, and Straight Lines.',
-    '5. Image Stamps & Signatures: Upload transparent PNG signatures & images.',
-    '6. Whiteout & Redaction: Cover sensitive information with privacy blocks.',
-    '7. Page Operations: Rotate, reorder, delete, or insert new blank pages.',
-    '8. True PDF Export: Save all changes into standard PDF files instantly.'
+    "1. Add & Edit Custom Text: Click anywhere on any page to insert custom text.",
+    "2. Freehand Pencil & Pen: Draw, sketch, and scribble directly on PDF pages.",
+    "3. Translucent Highlighter: Highlight important sentences with custom colors.",
+    "4. Shape Overlay: Draw Rectangles, Circles, Arrows, and Straight Lines.",
+    "5. Image Stamps & Signatures: Upload transparent PNG signatures & images.",
+    "6. Whiteout & Redaction: Cover sensitive information with privacy blocks.",
+    "7. Page Operations: Rotate, reorder, delete, or insert new blank pages.",
+    "8. True PDF Export: Save all changes into standard PDF files instantly.",
   ];
 
   let currentY = 640;
-  features.forEach(feat => {
+  features.forEach((feat) => {
     page1.drawText(feat, {
       x: 50,
       y: currentY,
@@ -77,13 +77,16 @@ export async function createSamplePdf() {
     borderWidth: 1,
   });
 
-  page1.drawText('TRY THIS: Use the Highlighter tool above to highlight this text block, or select the Pencil tool to draw a checkmark below!', {
-    x: 55,
-    y: 400,
-    size: 10,
-    font: fontHelveticaBold,
-    color: rgb(0.1, 0.3, 0.7),
-  });
+  page1.drawText(
+    "TRY THIS: Use the Highlighter tool above to highlight this text block, or select the Pencil tool to draw a checkmark below!",
+    {
+      x: 55,
+      y: 400,
+      size: 10,
+      font: fontHelveticaBold,
+      color: rgb(0.1, 0.3, 0.7),
+    },
+  );
 
   // Redaction Sample Box
   page1.drawRectangle({
@@ -96,7 +99,7 @@ export async function createSamplePdf() {
     borderWidth: 1,
   });
 
-  page1.drawText('CONFIDENTIAL SAMPLE DATA (Test Redaction Tool)', {
+  page1.drawText("CONFIDENTIAL SAMPLE DATA (Test Redaction Tool)", {
     x: 55,
     y: 325,
     size: 11,
@@ -104,7 +107,7 @@ export async function createSamplePdf() {
     color: rgb(0.7, 0.1, 0.1),
   });
 
-  page1.drawText('Secret Key: SK-998822-CONFIDENTIAL-2026', {
+  page1.drawText("Secret Key: SK-998822-CONFIDENTIAL-2026", {
     x: 55,
     y: 305,
     size: 10,
@@ -112,16 +115,19 @@ export async function createSamplePdf() {
     color: rgb(0.3, 0.3, 0.3),
   });
 
-  page1.drawText('Use the Whiteout tool to obscure the Secret Key string above.', {
-    x: 55,
-    y: 290,
-    size: 9,
-    font: fontHelvetica,
-    color: rgb(0.5, 0.5, 0.5),
-  });
+  page1.drawText(
+    "Use the Whiteout tool to obscure the Secret Key string above.",
+    {
+      x: 55,
+      y: 290,
+      size: 9,
+      font: fontHelvetica,
+      color: rgb(0.5, 0.5, 0.5),
+    },
+  );
 
   // Footer
-  page1.drawText('Page 1 of 2 - PDF Editor Pro Demo Document', {
+  page1.drawText("Page 1 of 2 - CODr Demo Document", {
     x: 200,
     y: 30,
     size: 9,
@@ -132,7 +138,7 @@ export async function createSamplePdf() {
   // Page 2: Notes & Playground
   const page2 = pdfDoc.addPage([600, 800]);
 
-  page2.drawText('PDF Editor Playground & Signature Page', {
+  page2.drawText("PDF Editor Playground & Signature Page", {
     x: 40,
     y: 750,
     size: 18,
@@ -140,13 +146,16 @@ export async function createSamplePdf() {
     color: rgb(0.1, 0.15, 0.25),
   });
 
-  page2.drawText('You can test page reordering, signature insertion, and page rotation here.', {
-    x: 40,
-    y: 725,
-    size: 11,
-    font: fontHelvetica,
-    color: rgb(0.4, 0.45, 0.55),
-  });
+  page2.drawText(
+    "You can test page reordering, signature insertion, and page rotation here.",
+    {
+      x: 40,
+      y: 725,
+      size: 11,
+      font: fontHelvetica,
+      color: rgb(0.4, 0.45, 0.55),
+    },
+  );
 
   // Signature Block Template
   page2.drawRectangle({
@@ -159,7 +168,7 @@ export async function createSamplePdf() {
     borderWidth: 1,
   });
 
-  page2.drawText('AUTHORIZED SIGNATURE:', {
+  page2.drawText("AUTHORIZED SIGNATURE:", {
     x: 50,
     y: 595,
     size: 9,
@@ -174,7 +183,7 @@ export async function createSamplePdf() {
     color: rgb(0.6, 0.6, 0.6),
   });
 
-  page2.drawText('Sign above using Pencil tool or Upload Image', {
+  page2.drawText("Sign above using Pencil tool or Upload Image", {
     x: 50,
     y: 515,
     size: 8,
@@ -193,7 +202,7 @@ export async function createSamplePdf() {
     borderWidth: 1,
   });
 
-  page2.drawText('DATE & STAMP:', {
+  page2.drawText("DATE & STAMP:", {
     x: 320,
     y: 595,
     size: 9,
@@ -201,7 +210,7 @@ export async function createSamplePdf() {
     color: rgb(0.3, 0.35, 0.45),
   });
 
-  page2.drawText('Click Text Tool to type current date', {
+  page2.drawText("Click Text Tool to type current date", {
     x: 320,
     y: 550,
     size: 10,
@@ -210,7 +219,7 @@ export async function createSamplePdf() {
   });
 
   // Footer
-  page2.drawText('Page 2 of 2 - PDF Editor Pro Demo Document', {
+  page2.drawText("Page 2 of 2 - CODr Demo Document", {
     x: 200,
     y: 30,
     size: 9,

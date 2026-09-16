@@ -1,4 +1,5 @@
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from "pdfjs-dist";
+import { TextLayerBuilder } from "pdfjs-dist/web/pdf_viewer.js";
 
 // Set up PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -32,9 +33,9 @@ export class PdfEngine {
     canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
     canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'high';
+    ctx.imageSmoothingQuality = "high";
 
     const renderContext = {
       canvasContext: ctx,
@@ -55,24 +56,23 @@ export class PdfEngine {
 
     try {
       const page = await this.pdfDoc.getPage(pageIndex);
-      const viewport = page.getViewport({ scale: scale });
+      const viewport = page.getViewport({ scale });
       const textContent = await page.getTextContent();
 
-      containerElement.innerHTML = '';
+      containerElement.innerHTML = "";
       containerElement.style.width = `${Math.floor(viewport.width)}px`;
       containerElement.style.height = `${Math.floor(viewport.height)}px`;
+      containerElement.style.setProperty("--scale-factor", scale);
 
-      if (pdfjsLib.renderTextLayer) {
-        await pdfjsLib.renderTextLayer({
-          textContentStream: textContent,
-          textContent: textContent,
-          container: containerElement,
-          viewport: viewport,
-          textDivs: [],
-        }).promise;
-      }
+      const textLayer = new TextLayerBuilder({
+        isOffscreenCanvasSupported: false,
+      });
+      textLayer.div.classList.add("text-layer");
+      containerElement.appendChild(textLayer.div);
+      textLayer.setTextContentSource(textContent);
+      await textLayer.render(viewport);
     } catch (err) {
-      console.warn('Text layer render notice:', err);
+      console.warn("Text layer render notice:", err);
     }
   }
 
@@ -87,7 +87,7 @@ export class PdfEngine {
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext("2d");
     const renderContext = {
       canvasContext: ctx,
       viewport: viewport,
