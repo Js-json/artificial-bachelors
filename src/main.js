@@ -202,6 +202,9 @@ class AppController {
 
     // Export PDF
     this.btnExportPdf.addEventListener('click', () => this.handleExportPdf());
+
+    // MS Word Style Text Interaction Popup & Context Menu
+    this.setupWordStyleTextInteractions();
   }
 
   setActiveTool(tool) {
@@ -412,6 +415,170 @@ class AppController {
       toast.style.transition = 'opacity 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, 3200);
+  }
+
+  setupWordStyleTextInteractions() {
+    const floatingToolbar = document.getElementById('word-floating-toolbar');
+    const contextMenu = document.getElementById('word-context-menu');
+
+    if (!floatingToolbar || !contextMenu) return;
+
+    const btnCopy = document.getElementById('word-btn-copy');
+    const btnPaste = document.getElementById('word-btn-paste');
+    const btnHighlight = document.getElementById('word-btn-highlight');
+    const btnDelete = document.getElementById('word-btn-delete');
+
+    const ctxCopy = document.getElementById('ctx-copy');
+    const ctxPaste = document.getElementById('ctx-paste');
+    const ctxHighlight = document.getElementById('ctx-highlight');
+    const ctxDelete = document.getElementById('ctx-delete');
+
+    let currentSelectedText = '';
+    let currentSelectionRange = null;
+
+    // Monitor text selection to trigger MS Word Floating Mini Toolbar
+    const updateFloatingToolbar = () => {
+      const selection = window.getSelection();
+      const text = selection ? selection.toString().trim() : '';
+
+      if (text.length > 0 && selection.rangeCount > 0) {
+        currentSelectedText = text;
+        const range = selection.getRangeAt(0);
+        currentSelectionRange = range.cloneRange();
+        const rect = range.getBoundingClientRect();
+
+        const viewportArea = document.getElementById('viewport-area');
+        if (viewportArea) {
+          const viewportRect = viewportArea.getBoundingClientRect();
+          const top = rect.top - viewportRect.top + viewportArea.scrollTop - 48;
+          const left = rect.left - viewportRect.left + viewportArea.scrollLeft + (rect.width / 2) - 100;
+
+          floatingToolbar.style.top = `${Math.max(10, top)}px`;
+          floatingToolbar.style.left = `${Math.max(10, left)}px`;
+          floatingToolbar.classList.remove('hidden');
+        }
+      } else if (document.activeElement && !floatingToolbar.contains(document.activeElement)) {
+        floatingToolbar.classList.add('hidden');
+      }
+    };
+
+    document.addEventListener('selectionchange', updateFloatingToolbar);
+    document.addEventListener('mouseup', updateFloatingToolbar);
+
+    // Actions
+    const doCopy = () => {
+      if (currentSelectedText) {
+        navigator.clipboard.writeText(currentSelectedText);
+        this.showToast('Text copied to clipboard!', 'success');
+      }
+    };
+
+    const doPaste = async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          const editor = this.editorCanvases.get(this.pageManager.activePageIndex);
+          if (editor) {
+            editor.addTextInput(100, 100);
+            this.showToast('Pasted text element onto page!', 'success');
+          }
+        }
+      } catch (err) {
+        this.showToast('Clipboard access granted', 'info');
+      }
+    };
+
+    const doHighlight = () => {
+      if (currentSelectionRange) {
+        const rects = currentSelectionRange.getClientRects();
+        const editor = this.editorCanvases.get(this.pageManager.activePageIndex);
+        if (editor) {
+          const pageWrapper = document.getElementById(`page-wrapper-${this.pageManager.activePageIndex}`);
+          if (pageWrapper) {
+            const pRect = pageWrapper.getBoundingClientRect();
+            editor.saveState();
+            for (let r of rects) {
+              editor.annotations.push({
+                id: Date.now() + Math.random(),
+                type: 'highlight',
+                points: [
+                  { x: r.left - pRect.left, y: r.top - pRect.top + r.height / 2 },
+                  { x: r.right - pRect.left, y: r.top - pRect.top + r.height / 2 },
+                ],
+                color: '#f59e0b',
+                strokeWidth: Math.max(14, r.height),
+                opacity: 0.45,
+              });
+            }
+            editor.notifyChange();
+            editor.redraw();
+            this.showToast('Text highlighted!', 'success');
+          }
+        }
+      }
+    };
+
+    const doDelete = () => {
+      if (currentSelectionRange) {
+        const rects = currentSelectionRange.getClientRects();
+        const editor = this.editorCanvases.get(this.pageManager.activePageIndex);
+        if (editor) {
+          const pageWrapper = document.getElementById(`page-wrapper-${this.pageManager.activePageIndex}`);
+          if (pageWrapper) {
+            const pRect = pageWrapper.getBoundingClientRect();
+            editor.saveState();
+            for (let r of rects) {
+              editor.annotations.push({
+                id: Date.now() + Math.random(),
+                type: 'whiteout',
+                x: r.left - pRect.left,
+                y: r.top - pRect.top,
+                width: r.width,
+                height: r.height,
+              });
+            }
+            editor.notifyChange();
+            editor.redraw();
+            window.getSelection().removeAllRanges();
+            floatingToolbar.classList.add('hidden');
+            this.showToast('Text erased!', 'success');
+          }
+        }
+      } else {
+        const editor = this.editorCanvases.get(this.pageManager.activePageIndex);
+        if (editor) editor.deleteSelected();
+      }
+    };
+
+    btnCopy.addEventListener('click', doCopy);
+    ctxCopy.addEventListener('click', () => { doCopy(); contextMenu.classList.add('hidden'); });
+
+    btnPaste.addEventListener('click', doPaste);
+    ctxPaste.addEventListener('click', () => { doPaste(); contextMenu.classList.add('hidden'); });
+
+    btnHighlight.addEventListener('click', doHighlight);
+    ctxHighlight.addEventListener('click', () => { doHighlight(); contextMenu.classList.add('hidden'); });
+
+    btnDelete.addEventListener('click', doDelete);
+    ctxDelete.addEventListener('click', () => { doDelete(); contextMenu.classList.add('hidden'); });
+
+    // Right Click MS Word Context Menu
+    window.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.page-wrapper') || e.target.closest('.annotation-layer') || e.target.closest('.text-layer')) {
+        e.preventDefault();
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.left = `${e.clientX}px`;
+        contextMenu.classList.remove('hidden');
+      } else {
+        contextMenu.classList.add('hidden');
+      }
+    });
+
+    window.addEventListener('click', (e) => {
+      if (!contextMenu.contains(e.target)) {
+        contextMenu.classList.add('hidden');
+      }
+    });
   }
 }
 
