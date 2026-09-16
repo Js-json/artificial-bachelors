@@ -21,6 +21,9 @@ export class PageEditorCanvas {
     this.currentPath = null;
     this.currentShape = null;
     this.selectedAnnotation = null;
+    this.selectedArea = null; // Area selected by dragging in select mode
+    this.currentAreaSelection = null;
+
     this.dragStart = null;
     this.dragInitialPos = null;
 
@@ -76,6 +79,7 @@ export class PageEditorCanvas {
     this.currentTool = tool;
     if (tool !== 'select') {
       this.selectedAnnotation = null;
+      this.selectedArea = null;
     }
     this.redraw();
   }
@@ -139,10 +143,24 @@ export class PageEditorCanvas {
     this.saveState();
 
     if (this.currentTool === 'select') {
-      this.selectedAnnotation = this.hitTest(pt);
-      if (this.selectedAnnotation) {
+      const hit = this.hitTest(pt);
+      if (hit) {
+        this.selectedAnnotation = hit;
+        this.selectedArea = null;
         this.dragStart = pt;
         this.dragInitialPos = this.getAnnotationPos(this.selectedAnnotation);
+      } else {
+        this.selectedAnnotation = null;
+        this.selectedArea = null;
+        this.isDrawing = true;
+        this.currentAreaSelection = {
+          startX: pt.x,
+          startY: pt.y,
+          x: pt.x,
+          y: pt.y,
+          width: 0,
+          height: 0,
+        };
       }
       this.redraw();
       return;
@@ -201,7 +219,13 @@ export class PageEditorCanvas {
 
     if (!this.isDrawing) return;
 
-    if (this.currentPath) {
+    if (this.currentAreaSelection) {
+      this.currentAreaSelection.width = pt.x - this.currentAreaSelection.startX;
+      this.currentAreaSelection.height = pt.y - this.currentAreaSelection.startY;
+      this.currentAreaSelection.x = Math.min(this.currentAreaSelection.startX, pt.x);
+      this.currentAreaSelection.y = Math.min(this.currentAreaSelection.startY, pt.y);
+      this.redraw();
+    } else if (this.currentPath) {
       this.currentPath.points.push(pt);
       this.redraw();
     } else if (this.currentShape) {
@@ -218,6 +242,21 @@ export class PageEditorCanvas {
       this.dragStart = null;
       this.dragInitialPos = null;
       this.notifyChange();
+    }
+
+    if (this.currentAreaSelection) {
+      if (Math.abs(this.currentAreaSelection.width) > 6 && Math.abs(this.currentAreaSelection.height) > 6) {
+        this.selectedArea = {
+          x: this.currentAreaSelection.x,
+          y: this.currentAreaSelection.y,
+          width: Math.abs(this.currentAreaSelection.width),
+          height: Math.abs(this.currentAreaSelection.height),
+        };
+      }
+      this.currentAreaSelection = null;
+      this.isDrawing = false;
+      this.redraw();
+      return;
     }
 
     if (!this.isDrawing) return;
@@ -259,7 +298,7 @@ export class PageEditorCanvas {
     input.style.top = `${y}px`;
     input.style.font = `${existingAnn ? existingAnn.fontSize : this.activeSize}px Inter, sans-serif`;
     input.style.color = existingAnn ? existingAnn.color : this.activeColor;
-    input.style.background = 'rgba(255, 255, 255, 0.9)';
+    input.style.background = 'rgba(255, 255, 255, 0.95)';
     input.style.border = '2px solid #3b82f6';
     input.style.borderRadius = '4px';
     input.style.padding = '2px 6px';
@@ -343,19 +382,40 @@ export class PageEditorCanvas {
   }
 
   deleteSelected() {
+    this.saveState();
+
+    // 1. If an area portion of the PDF is selected, delete/whiteout that area!
+    if (this.selectedArea) {
+      this.annotations.push({
+        id: Date.now() + Math.random(),
+        type: 'whiteout',
+        x: this.selectedArea.x,
+        y: this.selectedArea.y,
+        width: this.selectedArea.width,
+        height: this.selectedArea.height,
+      });
+      this.selectedArea = null;
+      this.notifyChange();
+      this.redraw();
+      return true;
+    }
+
+    // 2. If an annotation object is selected, delete it!
     if (this.selectedAnnotation) {
-      this.saveState();
       this.deleteAnnotation(this.selectedAnnotation);
       this.selectedAnnotation = null;
       this.redraw();
       return true;
-    } else if (this.annotations.length > 0) {
-      this.saveState();
+    }
+
+    // 3. If annotations exist on this page, delete the last added edit!
+    if (this.annotations.length > 0) {
       this.annotations.pop();
       this.notifyChange();
       this.redraw();
       return true;
     }
+
     return false;
   }
 
@@ -368,6 +428,7 @@ export class PageEditorCanvas {
     this.saveState();
     this.annotations = [];
     this.selectedAnnotation = null;
+    this.selectedArea = null;
     this.redraw();
     this.notifyChange();
   }
@@ -392,6 +453,7 @@ export class PageEditorCanvas {
       });
 
       this.selectedAnnotation = null;
+      this.selectedArea = null;
       this.redraw();
       this.notifyChange();
     }
@@ -461,7 +523,39 @@ export class PageEditorCanvas {
     if (this.currentPath) this.drawAnnotation(this.currentPath);
     if (this.currentShape) this.drawAnnotation(this.currentShape);
 
-    // Draw selection box
+    // Draw active dragging area selection box
+    if (this.currentAreaSelection) {
+      this.ctx.save();
+      this.ctx.strokeStyle = '#ef4444';
+      this.ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([6, 4]);
+      this.ctx.fillRect(this.currentAreaSelection.x, this.currentAreaSelection.y, this.currentAreaSelection.width, this.currentAreaSelection.height);
+      this.ctx.strokeRect(this.currentAreaSelection.x, this.currentAreaSelection.y, this.currentAreaSelection.width, this.currentAreaSelection.height);
+      this.ctx.restore();
+    }
+
+    // Draw active selected area box with delete badge
+    if (this.selectedArea) {
+      this.ctx.save();
+      this.ctx.strokeStyle = '#ef4444';
+      this.ctx.fillStyle = 'rgba(239, 68, 68, 0.12)';
+      this.ctx.lineWidth = 2;
+      this.ctx.setLineDash([4, 4]);
+      this.ctx.fillRect(this.selectedArea.x, this.selectedArea.y, this.selectedArea.width, this.selectedArea.height);
+      this.ctx.strokeRect(this.selectedArea.x, this.selectedArea.y, this.selectedArea.width, this.selectedArea.height);
+
+      // Badge label
+      this.ctx.fillStyle = '#ef4444';
+      this.ctx.fillRect(this.selectedArea.x, this.selectedArea.y - 20, 140, 20);
+      this.ctx.fillStyle = '#ffffff';
+      this.ctx.font = '11px Inter, sans-serif';
+      this.ctx.fillText('Selected Area (Press Del)', this.selectedArea.x + 6, this.selectedArea.y - 6);
+
+      this.ctx.restore();
+    }
+
+    // Draw object selection box
     if (this.selectedAnnotation) {
       this.drawSelectionOutline(this.selectedAnnotation);
     }
@@ -494,9 +588,9 @@ export class PageEditorCanvas {
     } else if (ann.type === 'whiteout') {
       this.ctx.fillStyle = '#ffffff';
       this.ctx.fillRect(ann.x, ann.y, ann.width, ann.height);
-      this.ctx.strokeStyle = '#cccccc';
+      this.ctx.strokeStyle = '#e2e8f0';
       this.ctx.lineWidth = 1;
-      this.ctx.setLineDash([4, 4]);
+      this.ctx.setLineDash([3, 3]);
       this.ctx.strokeRect(ann.x, ann.y, ann.width, ann.height);
     } else if (ann.type === 'rect') {
       this.ctx.strokeStyle = ann.color;

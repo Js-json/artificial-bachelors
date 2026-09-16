@@ -143,7 +143,24 @@ class AppController {
 
     this.btnDeleteSelected.addEventListener('click', () => {
       const editor = this.editorCanvases.get(this.pageManager.activePageIndex);
-      if (editor) editor.deleteSelected();
+      if (editor) {
+        const deleted = editor.deleteSelected();
+        if (deleted) this.showToast('Selection / Area Deleted');
+      }
+    });
+
+    // Global Keyboard Delete / Backspace Shortcut Listener
+    window.addEventListener('keydown', (e) => {
+      const activeElement = document.activeElement;
+      const isInput = activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
+      if (!isInput && (e.key === 'Delete' || e.key === 'Backspace')) {
+        e.preventDefault();
+        const editor = this.editorCanvases.get(this.pageManager.activePageIndex);
+        if (editor) {
+          const deleted = editor.deleteSelected();
+          if (deleted) this.showToast('Selection / Area Deleted');
+        }
+      }
     });
 
     // Sidebar & Pages
