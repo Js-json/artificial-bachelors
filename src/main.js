@@ -305,6 +305,14 @@ class AppController {
         pageWrapper.style.width = `${dims.width}px`;
         pageWrapper.style.height = `${dims.height}px`;
 
+        // Render PDF character selection layer
+        if (!pageMeta.isBlank) {
+          const textLayerDiv = document.createElement('div');
+          textLayerDiv.className = 'text-layer';
+          pageWrapper.appendChild(textLayerDiv);
+          this.pdfEngine.renderTextLayer(pageMeta.originalIndex, textLayerDiv, this.currentZoom);
+        }
+
         // Create editor overlay
         const editor = new PageEditorCanvas(
           pageWrapper,

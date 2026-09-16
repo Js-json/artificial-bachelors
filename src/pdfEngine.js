@@ -50,6 +50,32 @@ export class PdfEngine {
     };
   }
 
+  async renderTextLayer(pageIndex, containerElement, scale = 1.25) {
+    if (!this.pdfDoc || pageIndex < 1 || pageIndex > this.numPages) return;
+
+    try {
+      const page = await this.pdfDoc.getPage(pageIndex);
+      const viewport = page.getViewport({ scale: scale });
+      const textContent = await page.getTextContent();
+
+      containerElement.innerHTML = '';
+      containerElement.style.width = `${Math.floor(viewport.width)}px`;
+      containerElement.style.height = `${Math.floor(viewport.height)}px`;
+
+      if (pdfjsLib.renderTextLayer) {
+        await pdfjsLib.renderTextLayer({
+          textContentStream: textContent,
+          textContent: textContent,
+          container: containerElement,
+          viewport: viewport,
+          textDivs: [],
+        }).promise;
+      }
+    } catch (err) {
+      console.warn('Text layer render notice:', err);
+    }
+  }
+
   async renderThumbnail(pageIndex, canvas, targetWidth = 180) {
     if (!this.pdfDoc || pageIndex < 1 || pageIndex > this.numPages) return;
 
