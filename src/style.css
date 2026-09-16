@@ -1,25 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg-dark: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-surface-elevated: #334155;
-  --bg-glass: rgba(30, 41, 59, 0.75);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-light: rgba(255, 255, 255, 0.15);
+  --bg-dark: #121214;
+  --bg-surface: #1c1c21;
+  --bg-surface-elevated: #2d2d34;
+  --bg-glass: rgba(28, 28, 33, 0.85);
+  --border-color: rgba(255, 255, 255, 0.12);
+  --border-light: rgba(255, 255, 255, 0.2);
   
-  --primary: #3b82f6;
-  --primary-hover: #2563eb;
-  --primary-glow: rgba(59, 130, 246, 0.35);
-  --accent: #8b5cf6;
-  --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  --primary: #4b5563;
+  --primary-hover: #374151;
+  --primary-glow: rgba(156, 163, 175, 0.35);
+  --accent: #9ca3af;
+  --accent-gradient: linear-gradient(135deg, #4b5563 0%, #9ca3af 100%);
   --success: #10b981;
   --danger: #ef4444;
   --warning: #f59e0b;
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-primary: #f3f4f6;
+  --text-secondary: #9ca3af;
+  --text-muted: #6b7280;
 
   --sidebar-width: 240px;
   --toolsbar-width: 64px;
@@ -397,7 +397,7 @@ body, html {
   flex: 1;
   display: flex;
   flex-direction: column;
-  background: #090d16;
+  background: #141417;
   position: relative;
   overflow: hidden;
 }
