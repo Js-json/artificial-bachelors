@@ -58,4 +58,3 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), vercelApiDevPlugin(env)],
   }
 })
-

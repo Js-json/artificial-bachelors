@@ -146,5 +146,3 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({
     </div>
   );
 };
-
-
