@@ -60,11 +60,6 @@ class AppController {
     // Actions & Tools
     this.btnUndo = document.getElementById("btn-undo");
     this.btnClearPage = document.getElementById("btn-clear-page");
-    this.explanationDialog = document.getElementById("explanation-dialog");
-    this.explanationSelectedText = document.getElementById(
-      "explanation-selected-text",
-    );
-    this.explanationInput = document.getElementById("explanation-input");
 
     // Instantiate PageManager
     this.pageManager = new PageManager(
@@ -405,7 +400,6 @@ class AppController {
         }
 
         this.editorCanvases.set(pageNum, editor);
-        this.renderExplanationNotes(pageNum);
       }
     }
   }
@@ -474,52 +468,6 @@ class AppController {
     }, 3200);
   }
 
-  addExplanationAnnotation(explanation, isAi = false) {
-    const passage = this.selectedPassage;
-    if (!passage || !explanation.trim()) return false;
-
-    const editor = this.editorCanvases.get(passage.pageNumber);
-    if (!editor) return false;
-
-    editor.saveState();
-    editor.annotations.push({
-      id: Date.now() + Math.random(),
-      type: "explanation",
-      selectedText: passage.text,
-      pageNumber: passage.pageNumber,
-      rect: passage.rect,
-      explanation: explanation.trim(),
-      is_ai: isAi,
-    });
-    editor.notifyChange();
-    editor.redraw();
-    this.renderExplanationNotes(passage.pageNumber);
-    return true;
-  }
-
-  renderExplanationNotes(pageNum) {
-    const pageWrapper = document.getElementById(`page-wrapper-${pageNum}`);
-    const editor = this.editorCanvases.get(pageNum);
-    if (!pageWrapper || !editor) return;
-
-    pageWrapper
-      .querySelectorAll(".selection-note")
-      .forEach((note) => note.remove());
-    editor.annotations
-      .filter(
-        (annotation) => annotation.type === "explanation" && annotation.rect,
-      )
-      .forEach((annotation) => {
-        const note = document.createElement("div");
-        note.className = `selection-note${annotation.is_ai ? " ai-note" : ""}`;
-        note.style.left = `${annotation.rect.x * 100}%`;
-        note.style.top = `${Math.min(96, (annotation.rect.y + annotation.rect.height) * 100)}%`;
-        note.innerHTML = `<span class="selection-note-label">${annotation.is_ai ? "AI explanation" : "Explanation"}</span><span></span>`;
-        note.lastElementChild.textContent = annotation.explanation;
-        pageWrapper.appendChild(note);
-      });
-  }
-
   setupWordStyleTextInteractions() {
     const floatingToolbar = document.getElementById("word-floating-toolbar");
     const contextMenu = document.getElementById("word-context-menu");
@@ -530,13 +478,6 @@ class AppController {
     const btnPaste = document.getElementById("word-btn-paste");
     const btnHighlight = document.getElementById("word-btn-highlight");
     const btnDelete = document.getElementById("word-btn-delete");
-    const btnExplanation = document.getElementById("word-btn-explanation");
-    const btnAi = document.getElementById("word-btn-ai");
-    const explanationCancel = document.getElementById("explanation-cancel");
-    const explanationCancelSecondary = document.getElementById(
-      "explanation-cancel-secondary",
-    );
-    const explanationSave = document.getElementById("explanation-save");
 
     const ctxCopy = document.getElementById("ctx-copy");
     const ctxPaste = document.getElementById("ctx-paste");
@@ -545,42 +486,6 @@ class AppController {
 
     let currentSelectedText = "";
     let currentSelectionRange = null;
-
-    const hideSelectionToolbar = () => {
-      floatingToolbar.classList.add("hidden");
-    };
-
-    const positionSelectionToolbar = (rect, viewportArea) => {
-      floatingToolbar.classList.remove("hidden");
-      const areaRect = viewportArea.getBoundingClientRect();
-      const toolbarRect = floatingToolbar.getBoundingClientRect();
-      let left =
-        rect.left -
-        areaRect.left +
-        viewportArea.scrollLeft +
-        rect.width / 2 -
-        toolbarRect.width / 2;
-      let top = rect.bottom - areaRect.top + viewportArea.scrollTop + 8;
-      const minLeft = viewportArea.scrollLeft + 8;
-      const maxLeft =
-        viewportArea.scrollLeft +
-        viewportArea.clientWidth -
-        toolbarRect.width -
-        8;
-      if (
-        top + toolbarRect.height >
-        viewportArea.scrollTop + viewportArea.clientHeight - 8
-      ) {
-        top =
-          rect.top -
-          areaRect.top +
-          viewportArea.scrollTop -
-          toolbarRect.height -
-          8;
-      }
-      floatingToolbar.style.left = `${Math.max(minLeft, Math.min(left, maxLeft))}px`;
-      floatingToolbar.style.top = `${Math.max(viewportArea.scrollTop + 8, top)}px`;
-    };
 
     // Monitor text selection to trigger MS Word Floating Mini Toolbar
     const updateFloatingToolbar = () => {
@@ -596,13 +501,23 @@ class AppController {
         const viewportArea = document.getElementById("viewport-area");
         if (viewportArea) {
           const viewportRect = viewportArea.getBoundingClientRect();
-          positionSelectionToolbar(rect, viewportArea);
+          const top = rect.top - viewportRect.top + viewportArea.scrollTop - 48;
+          const left =
+            rect.left -
+            viewportRect.left +
+            viewportArea.scrollLeft +
+            rect.width / 2 -
+            100;
+
+          floatingToolbar.style.top = `${Math.max(10, top)}px`;
+          floatingToolbar.style.left = `${Math.max(10, left)}px`;
+          floatingToolbar.classList.remove("hidden");
         }
       } else if (
-        !floatingToolbar.matches(":hover") &&
-        !this.explanationDialog?.contains(document.activeElement)
+        document.activeElement &&
+        !floatingToolbar.contains(document.activeElement)
       ) {
-        hideSelectionToolbar();
+        floatingToolbar.classList.add("hidden");
       }
     };
 
@@ -616,6 +531,8 @@ class AppController {
         selection.rangeCount === 0 ||
         !selection.toString().trim()
       ) {
+        this.selectedPassage = null;
+        window.codrSelection = null;
         return;
       }
 
@@ -655,94 +572,6 @@ class AppController {
 
     document.addEventListener("selectionchange", captureSelection);
     document.addEventListener("mouseup", captureSelection);
-    document.addEventListener("mousedown", (event) => {
-      if (
-        floatingToolbar.contains(event.target) ||
-        this.explanationDialog?.contains(event.target)
-      )
-        return;
-      if (!event.target.closest(".text-layer")) {
-        this.selectedPassage = null;
-        window.codrSelection = null;
-        currentSelectedText = "";
-        currentSelectionRange = null;
-        hideSelectionToolbar();
-      }
-    });
-
-    floatingToolbar.addEventListener("mousedown", (event) =>
-      event.preventDefault(),
-    );
-
-    const openExplanation = () => {
-      if (!this.selectedPassage) return;
-      this.explanationSelectedText.textContent = this.selectedPassage.text;
-      this.explanationInput.value = "";
-      this.explanationDialog.classList.remove("hidden");
-      this.explanationInput.focus();
-    };
-
-    const closeExplanation = () => {
-      this.explanationDialog.classList.add("hidden");
-    };
-
-    const saveExplanation = () => {
-      if (this.addExplanationAnnotation(this.explanationInput.value, false)) {
-        closeExplanation();
-        this.showToast("Explanation added", "success");
-      } else {
-        this.showToast("Write an explanation before saving.", "warning");
-      }
-    };
-
-    const askAi = async () => {
-      const passage = this.selectedPassage;
-      if (!passage || !passage.text.trim() || btnAi.disabled) return;
-      const pageWrapper = document.getElementById(
-        `page-wrapper-${passage.pageNumber}`,
-      );
-      const context =
-        pageWrapper
-          ?.querySelector(".text-layer")
-          ?.textContent?.trim()
-          .slice(0, 10000) || "";
-      btnAi.disabled = true;
-      btnAi.dataset.originalLabel = btnAi.textContent.trim();
-      btnAi.textContent = "Explaining...";
-      try {
-        const response = await fetch("/api/explain", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            selectedText: passage.text,
-            surroundingContext: context,
-          }),
-        });
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || "Explanation request failed");
-        this.addExplanationAnnotation(
-          data.explanation || "No explanation returned.",
-          true,
-        );
-        this.showToast("AI explanation added", "success");
-      } catch (error) {
-        console.error("Failed to request explanation:", error);
-        this.showToast(
-          error.message || "Could not get an AI explanation.",
-          "danger",
-        );
-      } finally {
-        btnAi.disabled = false;
-        btnAi.textContent = "Ask AI";
-      }
-    };
-
-    btnExplanation.addEventListener("click", openExplanation);
-    btnAi.addEventListener("click", askAi);
-    explanationCancel.addEventListener("click", closeExplanation);
-    explanationCancelSecondary.addEventListener("click", closeExplanation);
-    explanationSave.addEventListener("click", saveExplanation);
 
     // Actions
     const doCopy = () => {
