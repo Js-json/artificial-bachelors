@@ -17,7 +17,7 @@ export const AnnotationPopup: React.FC<AnnotationPopupProps> = ({ content, onSav
       const res = await fetch('/api/explain', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: content.text })
+        body: JSON.stringify({ selectedText: content.text })
       });
       const data = await res.json();
       if (data.explanation) {
