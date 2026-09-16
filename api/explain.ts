@@ -5,10 +5,24 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method Not Allowed' })
   }
 
-  const { text, context } = req.body
+  let body = req.body
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body)
+    } catch {
+      body = {}
+    }
+  }
+
+  const text = body?.selectedText || body?.text
+  const context = body?.surroundingContext || body?.context
 
   if (!text) {
     return res.status(400).json({ error: 'Missing text in request body' })
+  }
+
+  if (typeof text === 'string' && text.length > 5000) {
+    return res.status(400).json({ error: 'Text exceeds maximum limit of 5000 characters' })
   }
 
   const apiKey = process.env.GEMINI_API_KEY
@@ -19,10 +33,10 @@ export default async function handler(req: any, res: any) {
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey)
-    // Using flash model for speed in the MVP
+    // Using flash model for fast response time
     const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
-    const prompt = `Explain the following difficult text from a PDF document to help the reader understand it. Keep the explanation concise and clear.
+    const prompt = `Explain the following text from a PDF document clearly and concisely to aid understanding.
     
 Text to explain: "${text}"
 ${context ? `Surrounding context: "${context}"` : ''}
@@ -35,6 +49,7 @@ Explanation:`
     return res.status(200).json({ explanation })
   } catch (error: any) {
     console.error('Error calling Gemini API:', error)
-    return res.status(500).json({ error: 'Failed to generate explanation', details: error.message })
+    return res.status(500).json({ error: 'Failed to generate explanation', details: error?.message || String(error) })
   }
 }
+

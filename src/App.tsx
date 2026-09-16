@@ -1,79 +1,172 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from './services/supabase';
 import { PdfViewer } from './components/PdfViewer';
+import { computeSHA256 } from './lib/crypto';
 import type { IHighlight, NewHighlight } from 'react-pdf-highlighter';
-import { Upload } from 'lucide-react';
+import { Upload, FileText, Loader2, AlertCircle } from 'lucide-react';
 
 function App() {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [documentHash, setDocumentHash] = useState<string | null>(null);
   const [highlights, setHighlights] = useState<IHighlight[]>([]);
+  const [loadingAnnotations, setLoadingAnnotations] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
-  // Function to load highlights for a given PDF url
-  const loadHighlights = async (url: string) => {
+  const loadAnnotationsForHash = async (hash: string) => {
     try {
       const { data, error } = await supabase
         .from('annotations')
         .select('*')
-        .eq('pdf_id', url);
-        
-      if (error) throw error;
-      
-      if (data) {
-        // Map data back to IHighlight format
-        const mapped = data.map((d: any) => ({
-          id: d.id.toString(),
-          position: d.position,
-          content: d.content,
-          comment: { text: d.explanation }
-        }));
-        setHighlights(mapped);
+        .eq('document_hash', hash)
+        .order('created_at', { ascending: true });
+
+      if (error) {
+        console.warn('Supabase query error:', error);
+        setDbError(`Database notice: ${error.message}`);
+        return;
       }
-    } catch (err) {
-      console.error('Failed to load highlights:', err);
+
+      if (data && data.length > 0) {
+        const mapped: IHighlight[] = data.map((d: any) => {
+          let x1 = d.rect_x ?? 0;
+          let y1 = d.rect_y ?? 0;
+          let w = d.rect_w ?? 0;
+          let h = d.rect_h ?? 0;
+
+          // Normalize legacy pixel coordinates if present
+          if (x1 > 1 || w > 1 || y1 > 1 || h > 1) {
+            const refW = w > 500 && (x1 + w > w) ? w : 800;
+            const refH = 1100;
+            x1 = x1 > 1 ? x1 / refW : x1;
+            y1 = y1 > 1 ? y1 / refH : y1;
+            w = w > 1 ? (w > 500 ? 0.3 : w / refW) : w;
+            h = h > 1 ? h / refH : h;
+          }
+
+          const boundingRect = {
+            x1,
+            y1,
+            x2: x1 + w,
+            y2: y1 + h,
+            width: 1,
+            height: 1,
+            pageNumber: d.page || 1,
+          };
+
+          return {
+            id: d.id ? d.id.toString() : String(Math.random()).slice(2),
+            position: {
+              pageNumber: d.page || 1,
+              boundingRect,
+              rects: [boundingRect],
+              usePdfCoordinates: false,
+            },
+            content: { text: d.selected_text || '' },
+            comment: {
+              text: d.explanation || '',
+              emoji: d.is_ai ? '🤖' : '✍️',
+              ...({ is_ai: d.is_ai } as any),
+            },
+          };
+        });
+        setHighlights(mapped);
+      } else {
+        setHighlights([]);
+      }
+    } catch (err: any) {
+      console.error('Failed to query Supabase annotations:', err);
+      setDbError(err?.message || 'Error querying annotations');
+      setHighlights([]);
     }
   };
 
-  useEffect(() => {
-    if (pdfUrl) {
-      loadHighlights(pdfUrl);
-    }
-  }, [pdfUrl]);
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      // In a real app, you'd upload this file to Supabase Storage and get a real URL
-      // For this MVP, we use object URL for local state
+    if (!file) return;
+
+    setLoadingAnnotations(true);
+    setDbError(null);
+
+    try {
+      const hash = await computeSHA256(file);
+      setDocumentHash(hash);
+
       const url = URL.createObjectURL(file);
       setPdfUrl(url);
+
+      await loadAnnotationsForHash(hash);
+    } catch (err: any) {
+      console.error('Failed to hash or load PDF:', err);
+      setDbError(err?.message || 'Failed to compute SHA-256 hash or load annotations');
+    } finally {
+      setLoadingAnnotations(false);
     }
   };
 
-  const handleAddHighlight = async (highlight: NewHighlight, explanation?: string) => {
+  const handleAddHighlight = async (highlight: NewHighlight, text: string, isAi: boolean) => {
     const newId = String(Math.random()).slice(2);
+
+    const b = highlight.position.boundingRect;
+    const pageW = b.width || 1;
+    const pageH = b.height || 1;
+
+    const normX = b.x1 / pageW;
+    const normY = b.y1 / pageH;
+    const normW = (b.x2 - b.x1) / pageW;
+    const normH = (b.y2 - b.y1) / pageH;
+
+    const normalizedBoundingRect = {
+      x1: normX,
+      y1: normY,
+      x2: normX + normW,
+      y2: normY + normH,
+      width: 1,
+      height: 1,
+      pageNumber: highlight.position.pageNumber,
+    };
+
     const newHighlight: IHighlight = {
       ...highlight,
       id: newId,
+      position: {
+        ...highlight.position,
+        boundingRect: normalizedBoundingRect,
+        rects: [normalizedBoundingRect],
+        usePdfCoordinates: false,
+      },
       comment: {
-        text: explanation || 'User note',
+        text,
+        emoji: isAi ? '🤖' : '✍️',
+        ...({ is_ai: isAi } as any),
       },
     };
-    
-    // Optimistic update
+
+    // Optimistic update of local state
     setHighlights((prev) => [...prev, newHighlight]);
 
-    // Save to supabase
-    if (pdfUrl) {
+    // Persist normalized ratios to Supabase annotations table
+    if (documentHash) {
       try {
-        await supabase.from('annotations').insert({
+        const { error } = await supabase.from('annotations').insert({
           id: newId,
-          pdf_id: pdfUrl,
-          position: highlight.position,
-          content: highlight.content,
-          explanation: explanation || 'User note'
+          document_hash: documentHash,
+          page: highlight.position.pageNumber,
+          selected_text: highlight.content.text || '',
+          rect_x: normX,
+          rect_y: normY,
+          rect_w: normW,
+          rect_h: normH,
+          explanation: text,
+          is_ai: isAi,
         });
-      } catch (err) {
-        console.error('Failed to save highlight:', err);
+
+        if (error) {
+          console.error('Failed to persist annotation to Supabase:', error);
+          setDbError(`Failed to save to database: ${error.message}`);
+        }
+      } catch (err: any) {
+        console.error('Supabase insert exception:', err);
+        setDbError(err?.message || 'Failed to save annotation to database');
       }
     }
   };
@@ -81,7 +174,25 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <header className="bg-white shadow-sm px-6 py-4 flex items-center justify-between z-10">
-        <h1 className="text-xl font-bold text-gray-800">PDF Knowledge Layer</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-gray-800">PDF Knowledge Layer</h1>
+          {documentHash && (
+            <span
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-medium bg-gray-100 text-gray-700 border border-gray-200"
+              title={`SHA-256: ${documentHash}`}
+            >
+              <FileText className="w-3.5 h-3.5 text-gray-500" />
+              Hash: {documentHash.slice(0, 12)}...
+            </span>
+          )}
+          {loadingAnnotations && (
+            <span className="flex items-center gap-1 text-xs text-indigo-600 font-medium">
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              Syncing annotations...
+            </span>
+          )}
+        </div>
+
         <div className="relative">
           <input
             type="file"
@@ -96,9 +207,24 @@ function App() {
         </div>
       </header>
 
+      {dbError && (
+        <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between text-xs text-amber-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
+            <span>{dbError}</span>
+          </div>
+          <button
+            onClick={() => setDbError(null)}
+            className="text-amber-700 hover:text-amber-900 font-semibold cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       <main className="flex-1 max-w-7xl mx-auto w-full p-6">
         {pdfUrl ? (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-[calc(100vh-120px)]">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden h-[calc(100vh-140px)]">
             <PdfViewer
               url={pdfUrl}
               highlights={highlights}
@@ -106,7 +232,7 @@ function App() {
             />
           </div>
         ) : (
-          <div className="h-[calc(100vh-120px)] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white relative hover:bg-gray-50 transition-colors">
+          <div className="h-[calc(100vh-140px)] flex flex-col items-center justify-center border-2 border-dashed border-gray-300 rounded-xl bg-white relative hover:bg-gray-50 transition-colors">
             <input
               type="file"
               accept=".pdf"
@@ -124,3 +250,4 @@ function App() {
 }
 
 export default App;
+
