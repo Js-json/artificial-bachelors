@@ -28,9 +28,9 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    // 4. Use official Gemini JS SDK with current fast Gemini model
+    // 4. Use official Gemini JS SDK with fast Gemini model
     const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
     // 5-8. Structured prompt: college student level, resolve references, preserve technical meaning, concise plain text
     const prompt = `You are an expert tutor explaining complex academic/technical text from a PDF document to a college student.
