@@ -176,13 +176,13 @@ export class PageManager {
       return;
     }
 
-    this.pageList.splice(pageNum - 1, 1);
+    const deletedPage = this.pageList.splice(pageNum - 1, 1)[0];
     if (this.activePageIndex > this.pageList.length) {
       this.activePageIndex = this.pageList.length;
     }
 
     this.renderThumbnails();
-    if (this.onPageOrderChange) this.onPageOrderChange();
+    if (this.onPageOrderChange) this.onPageOrderChange(deletedPage);
   }
 
   addBlankPage() {

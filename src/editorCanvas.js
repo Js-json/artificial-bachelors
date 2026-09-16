@@ -348,7 +348,15 @@ export class PageEditorCanvas {
       this.deleteAnnotation(this.selectedAnnotation);
       this.selectedAnnotation = null;
       this.redraw();
+      return true;
+    } else if (this.annotations.length > 0) {
+      this.saveState();
+      this.annotations.pop();
+      this.notifyChange();
+      this.redraw();
+      return true;
     }
+    return false;
   }
 
   deleteAnnotation(ann) {

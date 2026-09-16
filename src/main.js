@@ -39,6 +39,7 @@ class AppController {
     this.pagesSidebar = document.getElementById('pages-sidebar');
     this.thumbnailList = document.getElementById('thumbnail-list');
     this.btnAddBlankPage = document.getElementById('btn-add-blank-page');
+    this.btnDeleteCurrentPage = document.getElementById('btn-delete-current-page');
 
     // Property Inputs
     this.propColor = document.getElementById('prop-color');
@@ -61,7 +62,7 @@ class AppController {
     this.pageManager = new PageManager(
       this.pdfEngine,
       this.thumbnailList,
-      () => this.handlePageOrderChange(),
+      (deletedPage) => this.handlePageOrderChange(deletedPage),
       (pageNum) => this.handlePageSelect(pageNum)
     );
 
@@ -156,6 +157,15 @@ class AppController {
         this.showToast('Blank Page Added');
       }
     });
+
+    if (this.btnDeleteCurrentPage) {
+      this.btnDeleteCurrentPage.addEventListener('click', () => {
+        if (this.pdfEngine.rawBytes) {
+          this.pageManager.deletePage(this.pageManager.activePageIndex);
+          this.showToast('Page Deleted');
+        }
+      });
+    }
 
     // Zoom Controls
     this.btnZoomIn.addEventListener('click', () => this.setZoom(this.currentZoom + 0.15));
@@ -291,7 +301,7 @@ class AppController {
               canvasWidth: dims.width,
               canvasHeight: dims.height,
             }));
-            this.pageAnnotationsMap[pNum] = scaledAnns;
+            this.pageAnnotationsMap[pageMeta.id] = scaledAnns;
           }
         );
 
@@ -304,8 +314,9 @@ class AppController {
         });
 
         // Restore existing annotations if any
-        if (this.pageAnnotationsMap[pageNum]) {
-          editor.annotations = [...this.pageAnnotationsMap[pageNum]];
+        const existingAnns = this.pageAnnotationsMap[pageMeta.id] || this.pageAnnotationsMap[pageNum];
+        if (existingAnns) {
+          editor.annotations = [...existingAnns];
           editor.redraw();
         }
 
@@ -314,7 +325,10 @@ class AppController {
     }
   }
 
-  handlePageOrderChange() {
+  handlePageOrderChange(deletedPage) {
+    if (deletedPage && deletedPage.id) {
+      delete this.pageAnnotationsMap[deletedPage.id];
+    }
     this.renderAllPages();
   }
 

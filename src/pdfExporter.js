@@ -30,7 +30,7 @@ export async function exportModifiedPdf(originalPdfBytes, pageList, pageAnnotati
     }
 
     const { width: pdfWidth, height: pdfHeight } = newPage.getSize();
-    const annotations = pageAnnotationsMap[idx + 1] || [];
+    const annotations = pageAnnotationsMap[pageMeta.id] || pageAnnotationsMap[idx + 1] || [];
 
     for (let ann of annotations) {
       const canvasWidth = ann.canvasWidth || pdfWidth;
